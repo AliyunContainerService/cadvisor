@@ -31,9 +31,9 @@ WORKDIR /go/src/github.com/google/cadvisor
 
 # Cache Golang Dependencies for faster incremental builds
 ADD go.mod go.sum ./
-RUN go mod download && go mod tidy
+RUN go mod download
 ADD cmd/go.mod cmd/go.sum ./cmd/
-RUN cd cmd && go mod download && go mod tidy
+RUN cd cmd && go mod download
 
 ADD . .
 
