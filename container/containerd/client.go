@@ -18,15 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/cadvisor/container/common"
 	"net"
 	"sync"
 	"time"
 
+	snaptshotapi "github.com/containerd/containerd/api/services/snapshots/v1"
 	ptypes "github.com/gogo/protobuf/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/google/cadvisor/container/containerd/containers"
 	"github.com/google/cadvisor/container/containerd/errdefs"
 	"github.com/google/cadvisor/container/containerd/pkg/dialer"
@@ -34,18 +32,23 @@ import (
 	tasksapi "github.com/google/cadvisor/third_party/containerd/api/services/tasks/v1"
 	versionapi "github.com/google/cadvisor/third_party/containerd/api/services/version/v1"
 	tasktypes "github.com/google/cadvisor/third_party/containerd/api/types/task"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type client struct {
 	containerService containersapi.ContainersClient
 	taskService      tasksapi.TasksClient
 	versionService   versionapi.VersionClient
+	snapshotsService snaptshotapi.SnapshotsClient
 }
 
 type ContainerdClient interface {
 	LoadContainer(ctx context.Context, id string) (*containers.Container, error)
 	TaskPid(ctx context.Context, id string) (uint32, error)
 	Version(ctx context.Context) (string, error)
+	ContainerFsUsage(ctx context.Context, snapshotter, snapshotkey string) (*common.FsUsage, error)
 }
 
 var (
@@ -102,6 +105,7 @@ func Client(address, namespace string) (ContainerdClient, error) {
 			containerService: containersapi.NewContainersClient(conn),
 			taskService:      tasksapi.NewTasksClient(conn),
 			versionService:   versionapi.NewVersionClient(conn),
+			snapshotsService: snaptshotapi.NewSnapshotsClient(conn),
 		}
 	})
 	return ctrdClient, retErr
@@ -136,6 +140,21 @@ func (c *client) Version(ctx context.Context) (string, error) {
 		return "", errdefs.FromGRPC(err)
 	}
 	return response.Version, nil
+}
+
+func (c *client) ContainerFsUsage(ctx context.Context, snapshotter, snapshotkey string) (*common.FsUsage, error) {
+	usage, err := c.snapshotsService.Usage(ctx, &snaptshotapi.UsageRequest{
+		Snapshotter: snapshotter,
+		Key:         snapshotkey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &common.FsUsage{
+		BaseUsageBytes:  uint64(usage.Size_),
+		TotalUsageBytes: uint64(usage.Size_),
+		InodeUsage:      uint64(usage.Inodes),
+	}, nil
 }
 
 func containerFromProto(containerpb containersapi.Container) *containers.Container {

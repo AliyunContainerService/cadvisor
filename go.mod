@@ -9,6 +9,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.15
 	github.com/aws/aws-sdk-go v1.35.24
 	github.com/blang/semver/v4 v4.0.0
+	github.com/containerd/containerd/api v1.6.0-beta.3
 	github.com/containerd/ttrpc v1.2.2
 	github.com/containerd/typeurl v1.0.2
 	github.com/docker/docker v20.10.24+incompatible

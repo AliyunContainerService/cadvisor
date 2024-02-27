@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 export GOOS=${GOOS:-$(go env GOOS)}
 export GOARCH=${GOARCH:-$(go env GOARCH)}
